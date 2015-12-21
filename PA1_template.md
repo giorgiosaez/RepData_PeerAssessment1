@@ -81,6 +81,7 @@ sum(is.na(data$steps))
 2.Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
 
 ```r
+#The stategy used is taking the average of the 5-min interval
 fillNull = function(x,y){
   if(is.na(x)){ return(y) }
   return(x)

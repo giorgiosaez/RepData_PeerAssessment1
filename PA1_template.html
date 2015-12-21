@@ -122,7 +122,8 @@ legend(&quot;topright&quot;, legend = paste(&quot;The 5-minute interval with max
 <pre class="r"><code>sum(is.na(data$steps))</code></pre>
 <pre><code>## [1] 2304</code></pre>
 <p>2.Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.</p>
-<pre class="r"><code>fillNull = function(x,y){
+<pre class="r"><code>#The stategy used is taking the average of the 5-min interval
+fillNull = function(x,y){
   if(is.na(x)){ return(y) }
   return(x)
 }</code></pre>
