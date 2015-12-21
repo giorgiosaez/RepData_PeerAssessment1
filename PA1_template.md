@@ -5,7 +5,7 @@
 ```r
 wd <-"~/R/RepData/RepData_PeerAssessment1"
 if(!file.exists(wd)){dir.create(wd)}
-if (getwd()!=wd) {setwd(wd) }
+if (getwd()!= wd) {setwd(wd) }
 
 if(!file.exists("./data")){dir.create("./data")}
 
@@ -15,6 +15,7 @@ if (!file.exists(destfile) ){
   unzip(zipfile = destzip, exdir = paste0(wd,"/data"))
 } 
 data <- read.csv(destfile, header = TRUE, skipNul = T, na.strings = c("NA","NULL") )
+
 
 tidyData <- (subset(data, !is.na(data$steps)))
 library("data.table")
@@ -34,10 +35,10 @@ dataByDate = dataTable[, list(total_steps = sum(steps, na.rm = T)),
 ## What is mean total number of steps taken per day?
 
 ```r
-hist(dataByDate$total_steps, xlab = 'Total Number of Steps', breaks = 30, main = "Total Steps taken per day")
+hist(dataByDate$total_steps, xlab = 'Total Number of Steps', main = "Total Steps taken per day")
 
 mean <- round(mean(dataByDate$total_steps),1)
-median <- median(dataByDate$total_steps)
+median <-   median(dataByDate$total_steps)
 
 #place lines for mean and median on histogram
 abline(v=mean, lwd = 3, col = 'red')
@@ -53,24 +54,96 @@ legend('topright',lty = 1, col = c("red", "black"),
 ## What is the average daily activity pattern?
 
 ```r
-dataByInterval = dataTable[, list(average = mean(steps, na.rm = T)), 
-                          by = interval]
-                          plot(dataByInterval$interval,dataByInterval$average, type = "l", 
-          main = "Average Steps by Time Interval",
-          xlab = '5 Minute Time Interval', 
-          ylab = 'Average')
-        
-legend("topright",
-       legend = paste("The 5-minute interval with maximum number of steps is the number: ", dataByInterval[which.max(dataByInterval$average), ]$interval), cex = .7
-     
-       ) 
+dataByInterval = dataTable[, list(average = mean(steps, na.rm = T)), by = interval]
+
+plot(dataByInterval$interval,dataByInterval$average, type = "l", 
+                          main = "Average Steps by Time Interval",
+                          xlab = '5 Minute Time Interval', 
+                          ylab = 'Average')
+
+legend("topright", legend = paste("The 5-minute interval with maximum number of steps is: ",       
+        dataByInterval[which.max(dataByInterval$average), ]$interval), cex = .6) 
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
 
 ## Imputing missing values
 
+1.Calculate and report the total number of missing values in the dataset 
 
+```r
+sum(is.na(data$steps))
+```
+
+```
+## [1] 2304
+```
+2.Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+```r
+fillNull = function(x,y){
+  if(is.na(x)){ return(y) }
+  return(x)
+}
+```
+3.Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```r
+setkey(dataTable, interval)
+setkey(dataByInterval, interval)
+dataTable.Filled <- dataTable[dataByInterval]
+
+dataTable.Filled$new_steps = mapply(fillNull,dataTable.Filled$steps, dataTable.Filled$average)
+
+dataTable.Filled.Byday <- dataTable.Filled[, list(new_steps = sum(new_steps, na.rm = T)), 
+                          by = date]
+```
+4.Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```r
+hist(dataTable.Filled.Byday$new_steps, xlab = 'Total Number of Steps',breaks = 60, main = "Total Steps taken per day")
+
+mean <- round(mean(dataTable.Filled.Byday$new_steps),1)
+median <- round(median(dataTable.Filled.Byday$new_steps),1)
+
+abline(v=mean, lwd = 10, col = 'red')
+abline(v=median, lwd = 3, col = 'black')
+
+legend('topright',lty = 1, col = c("red", "black"),
+       legend = c(paste('Mean: ', mean),
+       paste('Median: ', median)))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```r
+#Make Function To Return Either "Weekday" or "Weekend"
+daytype = function(x){
+  if(x %in% c('Saturday', 'Sunday')){
+    return('Weekend')
+  }
+  return('Weekday')
+}
+
+dataTable.Filled$dayname = weekdays(as.Date(dataTable.Filled$date))
+dataTable.Filled$daytype = as.factor(apply(as.matrix(dataTable.Filled$dayname), 1, daytype))
+
+dataTable.Filled.Byinterval_daytype = dataTable.Filled[, list(average = mean(new_steps, na.rm = T)), by = list(interval, daytype)]
+
+library(lattice)
+```
+#Yes There are differences
+
+```r
+xyplot(average~interval | daytype, data = dataTable.Filled.Byinterval_daytype,
+      type = 'l',
+      xlab = 'Interval',
+      ylab = 'Number of Steps',
+      layout = c(1,2))
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
